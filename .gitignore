@@ -1,0 +1,12 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+
+man
+/man/
+*skeleton.html
+*.xlsx
+*_cache/
+*_files/

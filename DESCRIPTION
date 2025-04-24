@@ -1,0 +1,26 @@
+Package: ns99
+Title: Nick Spyrison's R Code
+Version: 0.0.0.9000
+Authors@R: 
+    person("Nicholas", "Spyrison", , "nicholas.spyrison@iff.com", role = c("aut", "cre"))
+Description: Miscellaneous R functions, mostly development and other utility functions.
+License: MIT + file LICENSE
+URL: https://github.com/nspyrison/ns99
+BugReports: https://github.com/nspyrison/ns99/issues
+Depends:
+    R (>= 3.5.0)
+Imports:
+    ggplot2,
+    dplyr
+Suggests:
+    rmarkdown,
+    knitr,
+    testthat,
+    covr,
+    spelling
+Language: en-US
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE, roclets=c('rd', 'collate', 'namespace'))
+RoxygenNote: 7.3.2
+VignetteBuilder: knitr
+LazyData: true

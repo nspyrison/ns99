@@ -1,46 +1,108 @@
 ## General helpers -----
 get_function_name <- function() {
-  if (sys.nframe() == 1) {
-    return("")
-  } else {
-    return(deparse(sys.call(-4)[[1]]))
+  if (sys.nframe() > 1) {
+    ret <- deparse(sys.call(-4)[[1]])
+    if(ret != "get_function_name")
+      return(paste0(ret, ": "))
   }
+  return("")
+}
+get_function_name2 <- function() {
+  if (sys.nframe() > 1) {
+    ret <- deparse(sys.call(-sys.nframe())[[1]])
+    if(ret != "get_function_name2")
+      return(paste0(ret, ": "))
+  }
+  return("")
 }
 
+
 dev_msg <- function(...) {
-  message(paste0(get_function_name(), ": ", paste0(...)))
-}
-dev_time <- function(){
-  message("started ", Sys.time() %>% substr(., 12, 19))
+  if (length(list(...)) > 0)
+    message(paste0(get_function_name(), ...))
 }
 dev_warn <- function(...) {
-  warning(paste0(get_function_name(), ": ", paste0(...)))
+  if (length(list(...)) > 0)
+    warning(paste0(get_function_name(), ...))
 }
 dev_stop <- function(...) {
-  stop(paste0(get_function_name(), ": ", paste0(...)))
+  if (length(list(...)) > 0)
+    stop(paste0(get_function_name(), ...))
+}
+dev_time <- function(){
+  message("Started ", substr(Sys.time(), 12, 19))
+}
+ns_tic <- function(...){
+  tictoc::tic(paste0(get_function_name(), ...))
+}
+ns_toc <- function(...){
+  tictoc::toc()
+}
+ns_beep <- function(sound = 1, ...){
+  dev_msg(...)
+  beepr::beep(sound)
 }
 
 #' @examples
 #' my_function <- function() {
-#'   dev_msg("Hi");return("")
+#'   dev_msg("a msg");return("")
 #' }
 #' my_function()
 #' 
 #' my_warn <- function() {
-#'   dev_warn("Hi");return("")
+#'   dev_warn("a warning");return("")
 #' }
 #' my_warn()
 #' 
 #' my_stop <- function() {
-#'   dev_stop("Hi");return("")
+#'   dev_stop("an error");return("")
 #' }
 #' my_stop()
 
 
-ns_open_rprofile <- function() file.edit(file.path("~", ".Rprofile")) ## Ran on start-up, be careful, this is playing with fire.
-ns_open_renviron <- function() file.edit(file.path("~", ".Renviron")) ## For API keys and envirnmental variables
 
-### ns_head(), for when head and print, just doesn't cut it. Temp extend print max.
+#' Open .Rprofile File
+#'
+#' This function opens the .Rprofile file for editing.
+#' Be cautious as this file is run on start-up.
+#'
+#' @return Opens the .Rprofile file in the default editor.
+#' @examples
+#' ns_open_rprofile()
+ns_open_rprofile <- function(){
+  dev_msg("Be cautious as this file is run on start-up.")
+  file.edit(file.path("~", ".Rprofile"))
+}
+
+
+#' Open .Renviron File
+#'
+#' This function opens the .Renviron file for editing.
+#' Useful for setting API keys and environmental variables.
+#'
+#' @return Opens the .Renviron file in the default editor.
+#' @examples
+#' ns_open_renviron()
+ns_open_renviron <- function(){
+  dev_msg("Store API keys and envirnmental variables here.")
+  file.edit(file.path("~", ".Renviron"))
+}
+
+
+
+#' Enhanced Head Function
+#'
+#' This function prints the first few rows of an object with extended print options.
+#' Temporarily extends the print max and width for better visibility.
+#'
+#' @param obj The object to print.
+#' @param n The number of rows to print. Default is 6.
+#' @param width The width of the print output. Default is Inf.
+#' @param as_tibble Logical, whether to convert the object to a tibble. Default is TRUE.
+#' @return Prints the object with specified options.
+#' @examples
+#' mt_wide <- dplyr::bind_cols(mtcars, mtcars)
+#' ns_head(mt_wide, n = 3)
 ns_head <- function(obj, n = 6, width = Inf, as_tibble = TRUE){
   if(as_tibble) obj <- tibble::as_tibble(obj)
   if(class(obj)[1] == "tbl_df"){
@@ -54,34 +116,58 @@ ns_head <- function(obj, n = 6, width = Inf, as_tibble = TRUE){
 }
 
 
-### Load specified packages.
-## Note: do NOT change defaultPackages option or call library() in your .Rprofile!!
-## Instead use a function to load libraries; much more safe.
-ns_libs <- function(libs <- c("tictoc", "beepr", "fcuk", 
+#' Load Specified Packages
+#'
+#' This function loads specified packages safely without changing default options.
+#' Note: Do NOT change the defaultPackages option or call library() in your .Rprofile.
+#' Instead, use this function to load libraries; it's much safer.
+#'
+#' @param libs A character vector of package names to load. Default includes common packages.
+#' @return Loads the specified packages and prints a message.
+#' @examples
+#' ns_libs(c("ggplot2", "dplyr"))
+#' ns_libs()
+ns_libs <- function(libs = c("tictoc", "beepr", "fcuk", 
                               "ggplot2", "dplyr", "tidyr")) {
   suppressPackageStartupMessages({
     lapply(libs, require, character.only = TRUE)
   })
-  message(paste0("ns_libs: ", length(libs)," packages loaded! (",
-                 paste(libs, collapse = ", "), ")"))
+  dev_msg(length(libs)," packages loaded! (",
+          paste(libs, collapse = ", "), ")")
 }
-ns_libs()
+
+
 
 ##### Package dev helpers -----
-#also see 
+
+#' Check Package on R-hub
+#'
+#' This function checks the package on specified R-hub platforms.
+#'
+#' @param platforms_to_check A character vector of platforms to check. Default includes major platforms.
+#' @param ... Additional arguments passed to rhub::rhub_check.
+#' @return Runs the package check on R-hub.
+#' @examples
+#' ns_rhub_check(c("linux", "windows"))
 ns_rhub_check <- function(
     platforms_to_check = c("linux", "macos-arm64", 
                            "windows", "ubuntu-release"), ...
 ) {
-  ## see rhub::platforms() for possible platforms
   dev_time()
-  #dev_msg("started ", Sys.time() %>% substr(., 12, 16))
   rhub::rhub_check(platform = platforms_to_check, ...)
 }
 ns_rhub_check()
 
-## Erroring b/c not waiting?
-## Run clean dll,& vignette, document(), install(), and rhub::check(), package dev check, on 4 most important platforms.
+
+#' Rebuild and Check Package on R-hub
+#'
+#' This function cleans, documents, installs, and checks the package on specified R-hub platforms.
+#'
+#' @param platforms_to_check A character vector of platforms to check. Default includes major platforms.
+#' @param ... Additional arguments passed to rhub::rhub_check.
+#' @return Runs the rebuild and check process on R-hub.
+#' @examples
+#' ns_rebuild_rhub_check(c("linux", "windows"))
 ns_rebuild_rhub_check <- function(
     platforms_to_check = c("linux", "macos-arm64", 
                            "windows", "ubuntu-release"), ...){
@@ -97,21 +183,14 @@ ns_rebuild_rhub_check <- function(
 
 ##### Bookdown helper functions -----
 
-# ## Copy 'n Paste a (bib) file to reduce compilation contention.
-# nsCnP_bib <- function(
-#     from = dir()[endsWith(dir(), ".bib")],
-#     to = paste0(normalizePath("../../../Downloads/"),
-#                 dir()[endsWith(dir(), ".bib")]),
-#     open = TRUE){
-#   if(!file.exists(from) | length(from) == 0L)
-#     stop(paste0("nsCnP_bib: File '", from, "' doesn't exist."))
-#   if(file.exists(to)){file.remove(to)}
-#   file.copy(from = from, to = to)
-#   if(open) file.edit(to)
-#   message(paste0("BibTex file copied to '", to, "'."))
-# }
-
-## Convert HTML slides to PDF slides
+#' Convert HTML Slides to PDF Slides
+#'
+#' This function converts HTML slides to PDF slides using the webshot package.
+#'
+#' @param dir A character string representing the directory containing HTML files or the HTML file directly. Default is the current directory.
+#' @return Converts the HTML file to a PDF file and prints a message.
+#' @examples
+#' ns_html_to_pdf("path/to/html/file.html")
 ns_html_to_pdf <- function(dir = "."){ ## Folder containing or .html file directly
   ext <- tolower(substr(dir, length(dir) - 4, length(dir)))
   if(ext != ".html") dir <- dir(dir)[endsWith(dir(dir), ".html")]
@@ -121,9 +200,17 @@ ns_html_to_pdf <- function(dir = "."){ ## Folder containing or .html file direct
   message(paste0("html file converted to'", pdf,"'."))
 }
 
-## Counts the lines of code in .R and .Rmd files in the repo
+
+#' Count Lines of Code in Repository
+#'
+#' This function counts the lines of code in .R and .Rmd files in the specified repository.
+#'
+#' @param repo_path A character string representing the path to the repository. Default is the current directory.
+#' @return A named vector with the number of files and the total number of lines of code.
+#' @examples
+#' ns_count_repo_lines("path/to/repo")
 ns_count_repo_lines <- function(repo_path = "."){
-  ## Get list of filenames
+  ## Get list of file names
   files <- list.files(path = repo_path, recursive = TRUE, full.names = TRUE)
   tgt_files <- append(
     stringr::str_subset(files, ".[Rr]$"), ## .r/.R
@@ -141,11 +228,45 @@ ns_count_repo_lines <- function(repo_path = "."){
 }
 
 ####### Debugging and trouble shooting -----
+
+#' Set Error Option to Browser
+#'
+#' This function sets the error option to `browser`, which allows debugging in an interactive environment.
+#'
+#' @return Sets the error option to `browser`.
+#' @examples
+#' ns_err_opts_browser()
 ns_err_opts_browser <- function(){options(error = browser)}
+
+
+#' Set Error Option to Recover
+#'
+#' This function sets the error option to `recover`, which provides a menu of frames for debugging.
+#'
+#' @return Sets the error option to `recover`.
+#' @examples
+#' ns_err_opts_recover()
 ns_err_opts_recover <- function(){options(error = recover)}
+
+
+#' Set Error Option to Default
+#'
+#' This function sets the error option to `NULL`, which is the default behavior.
+#'
+#' @return Sets the error option to `NULL`.
+#' @examples
+#' ns_err_opts_default()
 ns_err_opts_default <- function(){options(error = NULL)}
 
-## On next error go to browser(), default, or recover()
+
+#' Set Error Option for Next Error
+#'
+#' This function sets the error option to `browser`, `recover`, or `NULL` for the next error only.
+#'
+#' @param func_on_err A function to call on error. Options are `browser`, `recover`, or `NULL`.
+#' @return Sets the error option for the next error and then reverts to the previous option.
+#' @examples
+#' ns_on_err_once(browser)
 ns_on_err_once <- function(func_on_err = c(browser, recover, NULL)){
   .errOpt <- function(){
     old <- getOption("error")
@@ -157,8 +278,21 @@ ns_on_err_once <- function(func_on_err = c(browser, recover, NULL)){
   options(error = .errOpt)
 }
 
-## DON'T FORGET; to use debugcall() when you only want to debug once.
-## !!NOTE: This only searches attached namespaces
+
+#' Undebug All Functions in Attached Namespaces
+#'
+#' This function removes debugging from all functions in the attached namespaces.
+#'
+#' @param where A character vector of environments to search. Default is the search path.
+#' @return Invisibly returns the list of functions that were undebugged.
+#' @examples
+#' library(dplyr)
+#' debug(filter)
+#' if(F) ## Goes to Browse[1] debug
+#'   filter(mtcars, cyl > 4)
+#' ns_undebug_namespaces()
+#' ## Doesn't go to Browse[1] debug
+#' filter(mtcars, cyl > 4)
 ns_undebug_namespaces <- function(where = search()){
   isdebugged_safe <- function(x, ns=NULL){
     g <- if(is.null(ns)) get(x) else getFromNamespace(x,ns)
